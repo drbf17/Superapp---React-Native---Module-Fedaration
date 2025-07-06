@@ -52,7 +52,7 @@ yarn-error.log*
 .metro-health-check*
 
 # Bundle artifacts
-*.jsbundle
+# *.jsbundle - Commented out to allow committing federation bundles
 
 # Flipper
 #
@@ -213,7 +213,7 @@ ios/fastlane/screenshots
 ios/fastlane/test_output
 
 # Bundle artifact
-*.jsbundle
+# *.jsbundle - Commented out to allow committing federation bundles
 
 # Ruby / CocoaPods
 /ios/Pods/
@@ -223,8 +223,8 @@ ios/fastlane/test_output
 .metro-health-check*
 
 # Re.Pack / Module Federation specific
-*.container.js.bundle
-*.container.js.bundle.map
+# *.container.js.bundle - Commented out to allow committing federation bundles
+# *.container.js.bundle.map - Commented out to allow committing federation bundles
 */@mf-types.zip
 
 # Build outputs

@@ -54,7 +54,7 @@ yarn-error.log
 **/fastlane/test_output
 
 # Bundle artifact
-*.jsbundle
+# *.jsbundle - Commented out to allow committing federation bundles
 
 # Ruby / CocoaPods
 **/Pods/
