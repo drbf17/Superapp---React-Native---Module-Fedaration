@@ -15,17 +15,47 @@ import {
   Alert,
 } from 'react-native';
 
-// Componente de fallback simples
-const FallbackComponent = () => {
+// Componente de fallback melhorado
+const FallbackComponent = ({ error }: { error?: string }) => {
   const isDarkMode = useColorScheme() === 'dark';
+  
+  const getErrorMessage = () => {
+    if (error?.includes('NetworkFailure') || error?.includes('unexpected end of stream')) {
+      return {
+        title: '🌐 Servidor MicroApp não encontrado',
+        subtitle: 'Verifique se o MicroApp está rodando na porta 8085\ne se a rede está acessível'
+      };
+    }
+    if (error?.includes('Timeout')) {
+      return {
+        title: '⏱️ Timeout ao carregar MicroApp',
+        subtitle: 'O servidor demorou muito para responder.\nTente novamente em alguns segundos'
+      };
+    }
+    if (error?.includes('remoteEntryExports is undefined')) {
+      return {
+        title: '📦 Bundle MicroApp inválido',
+        subtitle: 'O arquivo do MicroApp não foi gerado corretamente.\nVerifique se ele está sendo compilado com Re.Pack'
+      };
+    }
+    return {
+      title: '❌ MicroApp não disponível',
+      subtitle: 'Verifique se o MicroApp está rodando e acessível'
+    };
+  };
+
+  const { title, subtitle } = getErrorMessage();
   
   return (
     <View style={fallbackStyles.container}>
       <Text style={[fallbackStyles.errorText, { color: isDarkMode ? '#FF6B6B' : '#CC0000' }]}>
-        ❌ MicroApp não disponível
+        {title}
       </Text>
       <Text style={[fallbackStyles.subText, { color: isDarkMode ? '#CCCCCC' : '#666666' }]}>
-        Verifique se o MicroApp está rodando na porta 8081
+        {subtitle}
+      </Text>
+      <Text style={[fallbackStyles.helpText, { color: isDarkMode ? '#888888' : '#999999' }]}>
+        💡 Modo de desenvolvimento: usando fallback local
       </Text>
     </View>
   );
@@ -35,16 +65,18 @@ function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   const [SimpleComponent, setSimpleComponent] = useState<React.ComponentType<any> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     const loadComponent = async () => {
       try {
         setLoading(true);
+        setError('');
         console.log('Tentando carregar MicroApp/SimpleComponent...');
         
         // Timeout para evitar espera infinita
         const timeout = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 3000)
+          setTimeout(() => reject(new Error('Timeout: MicroApp server não responde')), 5000)
         );
         
         const modulePromise = import('MicroApp/SimpleComponent');
@@ -53,9 +85,11 @@ function App(): React.JSX.Element {
         console.log('Módulo carregado:', module);
         
         setSimpleComponent(() => (module as any).default);
-      } catch (err) {
-        console.log('Usando componente de fallback. Erro:', err);
-        setSimpleComponent(() => FallbackComponent);
+      } catch (err: any) {
+        const errorMessage = err?.message || err?.toString() || 'Erro desconhecido';
+        console.log('Erro ao carregar MicroApp:', errorMessage);
+        setError(errorMessage);
+        setSimpleComponent(() => (props: any) => <FallbackComponent {...props} error={errorMessage} />);
       } finally {
         setLoading(false);
       }
@@ -154,11 +188,14 @@ const styles = StyleSheet.create({
 
 const fallbackStyles = StyleSheet.create({
   container: {
-    backgroundColor: 'transparent',
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+    backgroundColor: 'rgba(255, 107, 107, 0.05)',
   },
   errorText: {
     fontSize: 18,
@@ -171,6 +208,13 @@ const fallbackStyles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 10,
+  },
+  helpText: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    opacity: 0.7,
   },
 });
 
