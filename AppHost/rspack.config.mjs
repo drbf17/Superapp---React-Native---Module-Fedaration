@@ -31,7 +31,11 @@ export default {
       name: 'AppHost',
       filename: 'AppHost.container.js.bundle',
       remotes: {
-        MicroApp: 'MicroApp@http://127.0.0.1:8085/android/MicroApp.container.js.bundle',
+        MicroApp: {
+          external: 'MicroApp@http://127.0.0.1:8090/android/MicroApp.container.js.bundle',
+          shareScope: 'default',
+          type: 'global'
+        }
       },
       shared: Object.fromEntries(
         Object.entries(pkg.dependencies).map(([dep, version]) => [

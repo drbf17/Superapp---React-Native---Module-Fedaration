@@ -10,12 +10,22 @@ Superapp/
 │   ├── App.tsx       # Interface principal com área dedicada ao MicroApp
 │   ├── rspack.config.mjs  # Configuração Module Federation (consumer)
 │   └── package.json
-└── MicroApp/         # Microfrontend que expõe componentes
-    ├── App.tsx       # App standalone do MicroApp
-    ├── components/
-    │   └── SimpleComponent.tsx  # Componente exposto via Module Federation
-    ├── rspack.config.mjs  # Configuração Module Federation (provider)
-    └── package.json
+├── MicroApp/         # Microfrontend que expõe componentes
+│   ├── App.tsx       # App standalone do MicroApp
+│   ├── components/
+│   │   └── SimpleComponent.tsx  # Componente exposto via Module Federation
+│   ├── rspack.config.mjs  # Configuração Module Federation (provider)
+│   └── package.json
+└── http-server/      # Servidor para bundles estáticos (produção)
+    ├── server.js     # Servidor Express com CORS e MIME types corretos
+    ├── package.json
+    └── android/      # Bundles copiados do dev server
+        ├── MicroApp.container.js.bundle
+        ├── MicroApp.container.js.bundle.map
+        ├── __federation_expose_SimpleComponent.chunk.bundle
+        ├── __federation_expose_SimpleComponent.chunk.bundle.map
+        ├── mf-manifest.json
+        └── mf-stats.json
 ```
 
 ## 🛠️ Pré-requisitos
@@ -28,23 +38,56 @@ Superapp/
 
 ## ⚙️ Configuração Inicial
 
+### **Instalar Dependências**
+
+```bash
+# MicroApp
+cd MicroApp
+npm install
+
+# AppHost
+cd ../AppHost
+npm install
+
+# Servidor HTTP (para bundles estáticos)
+cd ../http-server
+npm install
+```
+
 ### **Android**
 1. Configure o Android SDK e emulador
 2. Inicie o emulador Android
 3. Configure mapeamento de portas: 
    ```bash
+   # Para desenvolvimento (dev servers)
    adb reverse tcp:8085 tcp:8085  # Porta do MicroApp
-   adb reverse tcp:8081 tcp:8081  # Porta do AppHost (se necessário)
+   adb reverse tcp:8081 tcp:8081  # Porta do AppHost
+   
+   # Para produção (servidor estático)
+   adb reverse tcp:8090 tcp:8090  # Porta do servidor estático
+   adb reverse tcp:8081 tcp:8081  # Porta do AppHost
    ```
 
 ### **iOS**
 1. Abra o Xcode e aceite as licenças
 2. Configure um simulador iOS
 3. Instale CocoaPods: `sudo gem install cocoapods`
+4. Instale dependências nativas:
+   ```bash
+   # MicroApp
+   cd MicroApp/ios
+   pod install
+   
+   # AppHost
+   cd ../../AppHost/ios
+   pod install
+   ```
 
 ## 🚀 Como Executar
 
-### 1️⃣ **Primeiro: Iniciar o MicroApp (Porta 8085)**
+### **Método 1: Desenvolvimento com Dev Servers (Recomendado)**
+
+#### 1️⃣ **Primeiro: Iniciar o MicroApp (Porta 8085)**
 
 O MicroApp deve estar rodando **ANTES** do AppHost, pois expõe os componentes.
 
@@ -55,14 +98,11 @@ cd MicroApp
 # Instalar dependências
 npm install
 
-# Iniciar o Metro bundler na porta 8085
-npm start
-# ou
-npx react-native start 
-
+# Iniciar o dev server Re.Pack na porta 8085
+npm run webpack-start
 ```
 
-### 2️⃣ **Segundo: Iniciar o AppHost (Porta 8081)**
+#### 2️⃣ **Segundo: Iniciar o AppHost (Porta 8081)**
 
 ```bash
 # Navegar para o diretório do AppHost
@@ -71,36 +111,114 @@ cd ../AppHost
 # Instalar dependências
 npm install
 
-# Iniciar o Metro bundler na porta 8081
-npm start
-# ou
-npx react-native start 
-
+# Iniciar o dev server Re.Pack na porta 8081
+npm run webpack-start
 ```
+
+### **Método 2: Produção com Servidor Estático (Porta 8090)**
+
+Para simular um ambiente de produção servindo bundles estáticos:
+
+#### 1️⃣ **Iniciar MicroApp Dev Server (Temporariamente)**
+
+```bash
+cd MicroApp
+npm run webpack-start
+# Servidor necessário para gerar bundles dinâmicos
+```
+
+#### 2️⃣ **Copiar Bundles e Iniciar Servidor Estático**
+
+```bash
+# No MicroApp, copiar todos os arquivos necessários e iniciar servidor estático
+npm run serve:dev-bundles
+```
+
+Este comando irá:
+- Baixar o bundle principal: `MicroApp.container.js.bundle`
+- Baixar o chunk do componente: `__federation_expose_SimpleComponent.chunk.bundle`
+- Baixar arquivos de metadata: `mf-manifest.json`, `mf-stats.json`
+- Baixar source maps para debugging
+- Iniciar servidor Express na porta 8090
+
+#### 3️⃣ **Configurar AppHost para Servidor Estático**
+
+Atualize `AppHost/rspack.config.mjs` para apontar para o servidor estático:
+
+```javascript
+remotes: {
+  MicroApp: {
+    external: 'MicroApp@http://127.0.0.1:8090/android/MicroApp.container.js.bundle',
+    shareScope: 'default',
+    type: 'global'
+  }
+}
+```
+
+#### 4️⃣ **Iniciar AppHost**
+
+```bash
+cd AppHost
+npm run webpack-start
+```
+
+## 🛠️ Scripts Disponíveis
+
+### **MicroApp**
+- `npm run webpack-start` - Inicia dev server Re.Pack na porta 8085
+- `npm run copy:dev-bundles` - Copia bundles e chunks do dev server para servidor estático
+- `npm run serve:dev-bundles` - Copia bundles e inicia servidor estático na porta 8090
+- `npm run android` - Executa no Android
+- `npm run ios` - Executa no iOS
+
+### **AppHost**
+- `npm run webpack-start` - Inicia dev server Re.Pack na porta 8081
+- `npm run android` - Executa no Android
+- `npm run ios` - Executa no iOS
+
+### **Arquivos Copiados pelo `serve:dev-bundles`**
+
+O script `npm run serve:dev-bundles` baixa os seguintes arquivos do dev server (8085) para o servidor estático (8090):
+
+| Arquivo | Descrição | Tamanho Aprox. |
+|---------|-----------|----------------|
+| `MicroApp.container.js.bundle` | Bundle principal com Module Federation | ~4.8MB |
+| `MicroApp.container.js.bundle.map` | Source map do bundle principal | ~5.7MB |
+| `__federation_expose_SimpleComponent.chunk.bundle` | Chunk específico do SimpleComponent | ~4KB |
+| `__federation_expose_SimpleComponent.chunk.bundle.map` | Source map do chunk | ~3KB |
+| `mf-manifest.json` | Manifest do Module Federation | ~9KB |
+| `mf-stats.json` | Estatísticas de build | ~79B |
+
+**Por que precisamos copiar estes arquivos?**
+
+1. **Bundle Principal**: Contém a interface do Module Federation e exposição global
+2. **Chunk do Componente**: Arquivo separado contendo o SimpleComponent específico
+3. **Source Maps**: Para debugging e symbolication de erros
+4. **Manifests**: Metadata necessária para resolução de módulos federados
 
 ### 🤖 **Executar no Android**
 
 ```bash
-# Em outro terminal, configurar mapeamento de portas para emulador
-adb reverse tcp:8085 tcp:8085  # MicroApp (porta principal)
-adb reverse tcp:8081 tcp:8081  # AppHost (se necessário)
+# Configurar mapeamento de portas para emulador
+# Para desenvolvimento:
+adb reverse tcp:8085 tcp:8085  # MicroApp dev server
+adb reverse tcp:8081 tcp:8081  # AppHost dev server
 
-# Executar no Android
-npx react-native run-android 
+# Para produção:
+adb reverse tcp:8090 tcp:8090  # Servidor estático
+adb reverse tcp:8081 tcp:8081  # AppHost dev server
 
+# Executar aplicação
+cd AppHost
+npm run android
 ```
 
 ### 🍎 **Executar no iOS**
 
 ```bash
-# Instalar dependências nativas do iOS (CocoaPods)
-cd ios
-pod install
-cd ..
-
-# Executar no iOS
-npx react-native run-ios
-
+# iOS não precisa de port mapping, usa localhost diretamente
+cd AppHost
+npm run ios
 ```
 
 ## 🧪 Como Testar a Integração
@@ -163,30 +281,76 @@ new Repack.plugins.ModuleFederationPluginV2({
 
 ## 📱 Portas Utilizadas
 
-| Aplicação | Porta | Descrição | Mapeamento Android |
-|-----------|-------|-----------|-------------------|
-| **MicroApp** | `8085` | Expõe componentes via Module Federation | `adb reverse tcp:8085 tcp:8085` |
-| **AppHost** | `8081` | Metro bundler do AppHost | `adb reverse tcp:8081 tcp:8081` |
+| Aplicação | Porta | Descrição | Mapeamento Android | Uso |
+|-----------|-------|-----------|-------------------|-----|
+| **MicroApp** | `8085` | Dev server (Module Federation) | `adb reverse tcp:8085 tcp:8085` | Desenvolvimento |
+| **AppHost** | `8081` | Dev server do AppHost | `adb reverse tcp:8081 tcp:8081` | Desenvolvimento |
+| **HTTP Server** | `8090` | Servidor para bundles estáticos | `adb reverse tcp:8090 tcp:8090` | Produção/Teste |
+
+### **Configuração por Cenário**
+
+**Desenvolvimento (Dev Servers):**
+```bash
+adb reverse tcp:8085 tcp:8085  # MicroApp
+adb reverse tcp:8081 tcp:8081  # AppHost
+```
+
+**Produção (Servidor Estático):**
+```bash
+adb reverse tcp:8090 tcp:8090  # Servidor estático
+adb reverse tcp:8081 tcp:8081  # AppHost
+```
+
+## 📦 Arquivos e Estrutura do Module Federation
+
+### **Arquivos Gerados pelo Dev Server (8085)**
+- `MicroApp.container.js.bundle` - Bundle principal com Module Federation runtime
+- `__federation_expose_SimpleComponent.chunk.bundle` - Chunk específico do componente
+- `mf-manifest.json` - Manifest com informações de exposição
+- `mf-stats.json` - Estatísticas de build
+- Source maps (`.map`) para todos os arquivos acima
+
+### **Servidor Estático Express (8090)**
+O arquivo `http-server/server.js` é um servidor Express customizado que:
+- Serve bundles com `Content-Type: application/javascript`
+- Habilita CORS para requisições cross-origin
+- Desabilita cache para desenvolvimento
+- Serve chunks com headers corretos para Module Federation
 
 ## 🔍 Troubleshooting
 
 ### ❌ **Erro: "MicroApp não disponível"**
-- **Causa:** MicroApp não está rodando na porta 8085
-- **Solução:** Inicie o MicroApp primeiro
+- **Causa:** MicroApp não está rodando na porta correta
+- **Solução:** 
+  - Desenvolvimento: Inicie `npm run webpack-start` no MicroApp (porta 8085)
+  - Produção: Inicie `npm run serve:dev-bundles` no MicroApp (porta 8090)
+
+### ❌ **Erro: "Loading chunk __federation_expose_SimpleComponent failed"**
+- **Causa:** Chunk do componente não foi copiado ou não está sendo servido
+- **Solução:** 
+  ```bash
+  cd MicroApp
+  npm run serve:dev-bundles  # Isso copia TODOS os arquivos necessários
+  ```
 
 ### ❌ **Erro: "EADDRINUSE: address already in use"**
 - **Causa:** Porta já está sendo utilizada
 - **Solução:** Use portas diferentes ou mate processos existentes:
   ```bash
   pkill -f "react-native start"
+  pkill -f "node.*server.js"  # Para servidor estático
   ```
 
 ### ❌ **Problemas de Rede no Android**
 - **Causa:** Emulador Android não consegue acessar localhost do host
-- **Solução:** Configure mapeamento de portas:
+- **Solução:** Configure mapeamento de portas correto:
   ```bash
-  # Mapear portas do emulador para host
-  adb reverse tcp:8085 tcp:8085  # MicroApp (porta principal)
+  # Para desenvolvimento
+  adb reverse tcp:8085 tcp:8085  # MicroApp dev server
+  adb reverse tcp:8081 tcp:8081  # AppHost
+  
+  # Para produção
+  adb reverse tcp:8090 tcp:8090  # Servidor estático
   adb reverse tcp:8081 tcp:8081  # AppHost
   
   # Verificar se o mapeamento está ativo
@@ -203,29 +367,36 @@ new Repack.plugins.ModuleFederationPluginV2({
   cd ../..
   ```
 
-### ❌ **Erro: "Failed to symbolicate"**
+### ❌ **Erro: "Failed to symbolicate" ou "Source map missing"**
 - **Causa:** Source maps não encontrados para bundles remotos
-- **Solução:** Adicionar supressão no App.tsx:
-  ```tsx
-  // Suprimir warnings de source map para bundles federados
-  if (__DEV__) {
-    const originalWarn = console.warn;
-    console.warn = (...args) => {
-      if (args[0]?.includes?.('Source map')) return;
-      originalWarn.apply(console, args);
-    };
-  }
-  ```
+- **Solução:** Os source maps são copiados automaticamente pelo `serve:dev-bundles`
 
 ### ❌ **Erro: "should have __webpack_require__.f.consumes"**
 - **Causa:** Problema na configuração do Module Federation
-- **Solução:** Verifique se as URLs dos remotes estão corretas
+- **Solução:** Verifique se as URLs dos remotes estão corretas no `rspack.config.mjs`
 
 ### ❌ **Componente não carrega no AppHost**
 - **Causa:** Timeout ou erro de rede
 - **Solução:** 
-  1. Verifique se o MicroApp está acessível: `curl http://127.0.0.1:8085/android/MicroApp.container.js.bundle`
+  1. Verifique se o servidor está acessível:
+     ```bash
+     # Para dev server
+     curl http://127.0.0.1:8085/android/MicroApp.container.js.bundle
+     
+     # Para servidor estático
+     curl http://127.0.0.1:8090/android/MicroApp.container.js.bundle
+     ```
   2. Verifique logs do console no AppHost
+
+### ❌ **Servidor estático não inicia**
+- **Causa:** Dependências do http-server não instaladas
+- **Solução:**
+  ```bash
+  cd http-server
+  npm install
+  cd ../MicroApp
+  npm run serve:dev-bundles
+  ```
 
 ## 🎯 Funcionalidades Demonstradas
 

@@ -1,0 +1,113 @@
+(self["webpackChunkmicroapp"] = self["webpackChunkmicroapp"] || []).push([["__federation_expose_SimpleComponent"], {
+"./components/SimpleComponent.tsx": 
+/*!****************************************!*\
+  !*** ./components/SimpleComponent.tsx ***!
+  \****************************************/
+(function (module, exports, __webpack_require__) {
+/* provided dependency */ var $ReactRefreshRuntime$ = __webpack_require__(/*! ./node_modules/.pnpm/@rspack+plugin-react-refresh@1.0.0_react-refresh@0.14.2/node_modules/@rspack/plugin-react-refresh/client/reactRefresh.js */ "./node_modules/.pnpm/@rspack+plugin-react-refresh@1.0.0_react-refresh@0.14.2/node_modules/@rspack/plugin-react-refresh/client/reactRefresh.js");
+Object.defineProperty(exports, "__esModule", ({
+    value: true
+}));
+Object.defineProperty(exports, "default", ({
+    enumerable: true,
+    get: function() {
+        return _default;
+    }
+}));
+var _interop_require_default = __webpack_require__(/*! @swc/helpers/_/_interop_require_default */ "./node_modules/.pnpm/@swc+helpers@0.5.17/node_modules/@swc/helpers/cjs/_interop_require_default.cjs");
+var _jsxruntime = __webpack_require__(/*! react/jsx-runtime */ "./node_modules/.pnpm/react@19.0.0/node_modules/react/jsx-runtime.js");
+var _react = /*#__PURE__*/ _interop_require_default._(__webpack_require__(/*! react */ "webpack/sharing/consume/default/react/react"));
+var _reactnative = __webpack_require__(/*! react-native */ "webpack/sharing/consume/default/react-native/react-native");
+var SimpleComponent = (ref)=>{
+    var _ref_title = ref.title, title = _ref_title === void 0 ? 'Meu Componente Simples' : _ref_title, _ref_buttonText = ref.buttonText, buttonText = _ref_buttonText === void 0 ? 'Clique Aqui' : _ref_buttonText, onButtonPress = ref.onButtonPress;
+    var isDarkMode = (0, _reactnative.useColorScheme)() === 'dark';
+    var handleButtonPress = ()=>{
+        if (onButtonPress) {
+            onButtonPress();
+        } else {
+            _reactnative.Alert.alert("Bot\xe3o pressionado!", "O bot\xe3o foi clicado com sucesso.");
+        }
+    };
+    return /*#__PURE__*/ (0, _jsxruntime.jsxs)(_reactnative.View, {
+        style: styles.container,
+        children: [
+            /*#__PURE__*/ (0, _jsxruntime.jsx)(_reactnative.Text, {
+                style: [
+                    styles.title,
+                    {
+                        color: isDarkMode ? '#FFFFFF' : '#000000'
+                    }
+                ],
+                children: title
+            }),
+            /*#__PURE__*/ (0, _jsxruntime.jsx)(_reactnative.TouchableOpacity, {
+                style: [
+                    styles.button,
+                    {
+                        backgroundColor: isDarkMode ? '#FF4444' : '#CC0000'
+                    }
+                ],
+                onPress: handleButtonPress,
+                activeOpacity: 0.7,
+                children: /*#__PURE__*/ (0, _jsxruntime.jsx)(_reactnative.Text, {
+                    style: styles.buttonText,
+                    children: buttonText
+                })
+            })
+        ]
+    });
+};
+var styles = _reactnative.StyleSheet.create({
+    container: {
+        backgroundColor: 'transparent',
+        padding: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 20
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 20
+    },
+    button: {
+        paddingHorizontal: 30,
+        paddingVertical: 12,
+        borderRadius: 8,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84
+    },
+    buttonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+        textAlign: 'center'
+    }
+});
+var _default = SimpleComponent;
+
+
+function $RefreshSig$() {
+  return $ReactRefreshRuntime$.createSignatureFunctionForTransform();
+}
+
+function $RefreshReg$(type, id) {
+  $ReactRefreshRuntime$.register(type, module.id + "_" + id);
+}
+
+if (typeof setImmediate !== "undefined") {
+  Promise.resolve().then(function() {
+    $ReactRefreshRuntime$.refresh(module.id, module.hot);
+  });
+}
+
+}),
+
+}]);//# sourceMappingURL=__federation_expose_SimpleComponent.chunk.bundle.map?platform=android
