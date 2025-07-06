@@ -22,12 +22,29 @@ Superapp/
 
 - **Node.js** >= 18
 - **React Native CLI** configurado
-- **Android Studio** ou emulador Android
-- **Xcode** (para iOS)
+- **Android Studio** ou emulador Android configurado
+- **Xcode** (para iOS) - versão 12 ou superior
+- **CocoaPods** (para iOS) - `sudo gem install cocoapods`
+
+## ⚙️ Configuração Inicial
+
+### **Android**
+1. Configure o Android SDK e emulador
+2. Inicie o emulador Android
+3. Configure mapeamento de portas: 
+   ```bash
+   adb reverse tcp:8085 tcp:8085  # Porta do MicroApp
+   adb reverse tcp:8081 tcp:8081  # Porta do AppHost (se necessário)
+   ```
+
+### **iOS**
+1. Abra o Xcode e aceite as licenças
+2. Configure um simulador iOS
+3. Instale CocoaPods: `sudo gem install cocoapods`
 
 ## 🚀 Como Executar
 
-### 1️⃣ **Primeiro: Iniciar o MicroApp (Porta 8081)**
+### 1️⃣ **Primeiro: Iniciar o MicroApp (Porta 8085)**
 
 O MicroApp deve estar rodando **ANTES** do AppHost, pois expõe os componentes.
 
@@ -38,16 +55,14 @@ cd MicroApp
 # Instalar dependências
 npm install
 
-# Iniciar o Metro bundler na porta 8081
+# Iniciar o Metro bundler na porta 8085
 npm start
 # ou
-npx react-native start --port 8081
+npx react-native start 
 
-# Em outro terminal, executar no Android
-npx react-native run-android
 ```
 
-### 2️⃣ **Segundo: Iniciar o AppHost (Porta 8083)**
+### 2️⃣ **Segundo: Iniciar o AppHost (Porta 8081)**
 
 ```bash
 # Navegar para o diretório do AppHost
@@ -56,13 +71,36 @@ cd ../AppHost
 # Instalar dependências
 npm install
 
-# Iniciar o Metro bundler na porta 8083
+# Iniciar o Metro bundler na porta 8081
 npm start
 # ou
-npx react-native start --port 8083
+npx react-native start 
 
-# Em outro terminal, executar no Android
-npx react-native run-android --port 8083
+```
+
+### 🤖 **Executar no Android**
+
+```bash
+# Em outro terminal, configurar mapeamento de portas para emulador
+adb reverse tcp:8085 tcp:8085  # MicroApp (porta principal)
+adb reverse tcp:8081 tcp:8081  # AppHost (se necessário)
+
+# Executar no Android
+npx react-native run-android 
+
+```
+
+### 🍎 **Executar no iOS**
+
+```bash
+# Instalar dependências nativas do iOS (CocoaPods)
+cd ios
+pod install
+cd ..
+
+# Executar no iOS
+npx react-native run-ios
+
 ```
 
 ## 🧪 Como Testar a Integração
@@ -73,8 +111,8 @@ npx react-native run-android --port 8083
 3. Clique no botão para testar funcionamento
 
 ### ✅ **Teste 2: AppHost com MicroApp Integrado**
-1. Certifique-se que o **MicroApp está rodando** na porta 8081
-2. Abra o **AppHost** na porta 8083
+1. Certifique-se que o **MicroApp está rodando** na porta 8085
+2. Abra o **AppHost** na porta 8081
 3. Deve exibir:
    - Título: "Você está no AppHost"
    - Área destacada: "Área do MicroApp"
@@ -117,7 +155,7 @@ new Repack.plugins.ModuleFederationPluginV2({
   name: 'AppHost',
   filename: 'AppHost.container.js.bundle',
   remotes: {
-    MicroApp: 'MicroApp@http://127.0.0.1:8081/android/MicroApp.container.js.bundle',
+    MicroApp: 'MicroApp@http://127.0.0.1:8085/android/MicroApp.container.js.bundle',
   },
   shared: { /* dependências compartilhadas */ }
 })
@@ -125,15 +163,15 @@ new Repack.plugins.ModuleFederationPluginV2({
 
 ## 📱 Portas Utilizadas
 
-| Aplicação | Porta | Descrição |
-|-----------|--------|-----------|
-| **MicroApp** | `8081` | Expõe componentes via Module Federation |
-| **AppHost** | `8083` | Consome componentes do MicroApp |
+| Aplicação | Porta | Descrição | Mapeamento Android |
+|-----------|-------|-----------|-------------------|
+| **MicroApp** | `8085` | Expõe componentes via Module Federation | `adb reverse tcp:8085 tcp:8085` |
+| **AppHost** | `8081` | Metro bundler do AppHost | `adb reverse tcp:8081 tcp:8081` |
 
 ## 🔍 Troubleshooting
 
 ### ❌ **Erro: "MicroApp não disponível"**
-- **Causa:** MicroApp não está rodando na porta 8081
+- **Causa:** MicroApp não está rodando na porta 8085
 - **Solução:** Inicie o MicroApp primeiro
 
 ### ❌ **Erro: "EADDRINUSE: address already in use"**
@@ -143,6 +181,42 @@ new Repack.plugins.ModuleFederationPluginV2({
   pkill -f "react-native start"
   ```
 
+### ❌ **Problemas de Rede no Android**
+- **Causa:** Emulador Android não consegue acessar localhost do host
+- **Solução:** Configure mapeamento de portas:
+  ```bash
+  # Mapear portas do emulador para host
+  adb reverse tcp:8085 tcp:8085  # MicroApp (porta principal)
+  adb reverse tcp:8081 tcp:8081  # AppHost
+  
+  # Verificar se o mapeamento está ativo
+  adb reverse --list
+  ```
+
+### ❌ **Problemas no iOS com CocoaPods**
+- **Causa:** Dependências nativas não instaladas
+- **Solução:** 
+  ```bash
+  cd AppHost/ios
+  pod deintegrate  # Limpar instalação anterior
+  pod install      # Reinstalar dependências
+  cd ../..
+  ```
+
+### ❌ **Erro: "Failed to symbolicate"**
+- **Causa:** Source maps não encontrados para bundles remotos
+- **Solução:** Adicionar supressão no App.tsx:
+  ```tsx
+  // Suprimir warnings de source map para bundles federados
+  if (__DEV__) {
+    const originalWarn = console.warn;
+    console.warn = (...args) => {
+      if (args[0]?.includes?.('Source map')) return;
+      originalWarn.apply(console, args);
+    };
+  }
+  ```
+
 ### ❌ **Erro: "should have __webpack_require__.f.consumes"**
 - **Causa:** Problema na configuração do Module Federation
 - **Solução:** Verifique se as URLs dos remotes estão corretas
@@ -150,7 +224,7 @@ new Repack.plugins.ModuleFederationPluginV2({
 ### ❌ **Componente não carrega no AppHost**
 - **Causa:** Timeout ou erro de rede
 - **Solução:** 
-  1. Verifique se o MicroApp está acessível: `curl http://127.0.0.1:8081/android/MicroApp.container.js.bundle`
+  1. Verifique se o MicroApp está acessível: `curl http://127.0.0.1:8085/android/MicroApp.container.js.bundle`
   2. Verifique logs do console no AppHost
 
 ## 🎯 Funcionalidades Demonstradas
