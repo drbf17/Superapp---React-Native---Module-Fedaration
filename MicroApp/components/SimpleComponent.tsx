@@ -44,7 +44,7 @@ const SimpleComponent: React.FC<SimpleComponentProps> = ({
         style={[
           styles.button,
           {
-            backgroundColor: isDarkMode ? '#FF4444' : '#CC0000',
+            backgroundColor: isDarkMode ? '#4444FF' : '#0066CC',
           },
         ]}
         onPress={handleButtonPress}

@@ -16,6 +16,15 @@ const __dirname = path.dirname(__filename);
 export default {
   context: __dirname,
   entry: './index.js',
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+  
+  // Optimization for smaller bundles (without breaking externals)
+  optimization: {
+    usedExports: true, // Tree shaking
+    sideEffects: false, // More aggressive tree shaking
+    splitChunks: false, // Don't split chunks for micro-frontend
+  },
+  
   resolve: {
     ...Repack.getResolveOptions(),
   },
@@ -34,12 +43,21 @@ export default {
       exposes: {
         './SimpleComponent': './components/SimpleComponent',
       },
-      shared: Object.fromEntries(
-        Object.entries(pkg.dependencies).map(([dep, version]) => [
-          dep,
-          {singleton: true, eager: true, requiredVersion: version},
-        ])
-      ),
+      shared: {
+        // AppHost already provides these - MicroApp will consume them
+        'react': {
+          singleton: true,
+          eager: false,
+          requiredVersion: pkg.dependencies.react,
+          import: false, // Don't bundle, consume from host
+        },
+        'react-native': {
+          singleton: true,
+          eager: false,
+          requiredVersion: pkg.dependencies['react-native'],
+          import: false, // Don't bundle, consume from host
+        },
+      },
     }),
   ],
 };
