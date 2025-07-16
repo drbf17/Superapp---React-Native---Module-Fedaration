@@ -7,7 +7,13 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start --port 8085",
-    "test": "jest"
+    "test": "jest",
+    "bundle": "pnpm bundle:ios && pnpm bundle:android",
+    "bundle:ios": "react-native bundle --platform ios --entry-file index.js",
+    "bundle:android": "react-native bundle --platform android --entry-file index.js",
+    "bundle:android:prod": "react-native bundle --platform android --dev false --entry-file index.js ",
+    "serve:prod": "node server.js",
+    "prod": "npm run bundle:android:prod && npm run serve:prod"
   },
   "dependencies": {
     "react": "19.0.0",
