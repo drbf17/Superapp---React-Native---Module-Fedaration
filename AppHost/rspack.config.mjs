@@ -53,17 +53,17 @@ export default (env, ctx) => {
           assetsPath,
         },
       }),
-      // Temporarily disable Module Federation to avoid RUNTIME-006 errors
-      // Will implement a custom remote component loader instead
-      // new Repack.plugins.ModuleFederationPluginV2({
-      //   name: 'AppHost',
-      //   remotes: {
-      //     MicroApp: 'MicroApp@http://10.0.2.2:8090/remoteEntry.js',
-      //   },
-      //   // Remove shared dependencies to avoid RUNTIME-006 error in React Native
-      //   // React Native Module Federation doesn't handle shared dependencies well
-      //   shared: {},
-      // }),
+
+      new Repack.plugins.ModuleFederationPluginV2({
+        name: 'AppHost',
+        remotes: {
+          MicroApp: 'MicroApp@http://localhost:8090/MicroApp.container.js.bundle',
+        },
+        shared: {
+          react: { singleton: true, eager: true },
+          "react-native": { singleton: true, eager: true },
+        },
+      }),
     ],
     optimization: {
       minimize,
