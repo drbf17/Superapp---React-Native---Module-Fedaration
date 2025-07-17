@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import {
   View,
   Text,
@@ -14,79 +14,63 @@ interface SimpleComponentProps {
   onButtonPress?: () => void;
 }
 
-const SimpleComponent: React.FC<SimpleComponentProps> = ({
-  title = 'Meu Componente Simples',
-  buttonText = 'Clique Aqui',
-  onButtonPress,
-}) => {
-  const isDarkMode = useColorScheme() === 'dark';
+const SimpleComponent = memo<SimpleComponentProps>(
+  ({
+    title = 'Meu Componente Simples',
+    buttonText = 'Clique Aqui',
+    onButtonPress,
+  }) => {
+    const isDarkMode = useColorScheme() === 'dark';
 
-  const handleButtonPress = () => {
-    if (onButtonPress) {
-      onButtonPress();
-    } else {
-      Alert.alert('Botão pressionado!', 'O botão foi clicado com sucesso.');
-    }
-  };
+    const handleButtonPress = () => {
+      if (onButtonPress) {
+        onButtonPress();
+      } else {
+        Alert.alert('Botão pressionado!', 'O botão foi clicado com sucesso.');
+      }
+    };
 
-  return (
-    <View style={styles.container}>
-      <Text
-        style={[
-          styles.title,
-          {
-            color: isDarkMode ? '#FFFFFF' : '#000000',
-          },
-        ]}>
-        {title}
-      </Text>
-      <TouchableOpacity
-        style={[
-          styles.button,
-          {
-            backgroundColor: isDarkMode ? '#4444FF' : '#0066CC',
-          },
-        ]}
-        onPress={handleButtonPress}
-        activeOpacity={0.7}>
-        <Text style={styles.buttonText}>{buttonText}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
+    const textColor = isDarkMode ? '#FFFFFF' : '#000000';
+    const buttonColor = isDarkMode ? '#4444FF' : '#0066CC';
+
+    return (
+      <View style={styles.container}>
+        <Text style={[styles.title, { color: textColor }]}>{title}</Text>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: buttonColor }]}
+          onPress={handleButtonPress}>
+          <Text style={styles.buttonText}>{buttonText}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'transparent',
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginVertical: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
   },
   button: {
-    paddingHorizontal: 30,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 8,
+    alignItems: 'center',
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
 
