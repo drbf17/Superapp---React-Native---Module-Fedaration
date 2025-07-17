@@ -6,36 +6,48 @@ import pkg from './package.json' with { type: "json" };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Rspack configuration enhanced with Re.Pack defaults for React Native.
- *
- * Learn about Rspack configuration: https://rspack.dev/config/
- * Learn about Re.Pack configuration: https://re-pack.dev/docs/guides/configuration
- */
-
 export default {
   context: __dirname,
   entry: './index.js',
-  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+  mode: 'production',
+  devtool: false,
   
-  // Optimization for smaller bundles (without breaking externals)
   optimization: {
-    usedExports: true, // Tree shaking
-    sideEffects: false, // More aggressive tree shaking
-    splitChunks: false, // Don't split chunks for micro-frontend
+    usedExports: true,
+    sideEffects: false,
+    splitChunks: false,
+    minimize: true,
+    mangleExports: 'size',
+    removeAvailableModules: true,
+    removeEmptyChunks: true,
+    mergeDuplicateChunks: true,
+    providedExports: true,
+  },
+  
+  output: {
+    path: path.resolve(__dirname, 'dist'), 
+    filename: 'bundle.js',
+    publicPath: '/static/',
+    clean: true,
+    chunkFormat: 'commonjs',
   },
   
   resolve: {
     ...Repack.getResolveOptions(),
+    // Reduzir módulos desnecessários
+    alias: {
+      '@react-native/polyfills': false,
+    },
   },
+  
   module: {
     rules: [
       ...Repack.getJsTransformRules(),
       ...Repack.getAssetTransformRules(),
     ],
   },
+  
   plugins: [
-    new Repack.RepackPlugin(),
     new Repack.plugins.ModuleFederationPluginV2({
       name: 'MicroApp',
       filename: 'MicroApp.container.js.bundle',
@@ -44,20 +56,41 @@ export default {
         './SimpleComponent': './components/SimpleComponent',
       },
       shared: {
-        // AppHost already provides these - MicroApp will consume them
         'react': {
           singleton: true,
           eager: false,
           requiredVersion: pkg.dependencies.react,
-          import: false, // Don't bundle, consume from host
+          import: false,
         },
         'react-native': {
           singleton: true,
           eager: false,
           requiredVersion: pkg.dependencies['react-native'],
-          import: false, // Don't bundle, consume from host
+          import: false,
+        },
+        'react/jsx-runtime': {
+          singleton: true,
+          eager: false,
+          import: false,
+        },
+        // Adicionar mais dependências compartilhadas
+        'react-native/Libraries/EventEmitter/NativeEventEmitter': {
+          singleton: true,
+          eager: false,
+          import: false,
+        },
+        'react-native/Libraries/Components/View/View': {
+          singleton: true,
+          eager: false,
+          import: false,
         },
       },
     }),
   ],
+  
+  externals: {
+    'react': 'react',
+    'react-native': 'react-native',
+    'react/jsx-runtime': 'react/jsx-runtime',
+  },
 };
