@@ -34,7 +34,6 @@ export default {
   
   resolve: {
     ...Repack.getResolveOptions(),
-    // Reduzir módulos desnecessários
     alias: {
       '@react-native/polyfills': false,
     },
@@ -73,7 +72,6 @@ export default {
           eager: false,
           import: false,
         },
-        // Adicionar mais dependências compartilhadas
         'react-native/Libraries/EventEmitter/NativeEventEmitter': {
           singleton: true,
           eager: false,
