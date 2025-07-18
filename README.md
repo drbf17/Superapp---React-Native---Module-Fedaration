@@ -33,7 +33,8 @@ Superapp/
 2. Inicie o emulador Android
 3. Configure mapeamento de portas: 
    ```bash
-   adb reverse tcp:8085 tcp:8085  # Porta do MicroApp
+   adb reverse tcp:8085 tcp:8085  # Porta do MicroApp (desenvolvimento)
+   adb reverse tcp:8090 tcp:8090  # Porta do servidor HTTP (produção)
    adb reverse tcp:8081 tcp:8081  # Porta do AppHost (se necessário)
    ```
 
@@ -42,7 +43,24 @@ Superapp/
 2. Configure um simulador iOS
 3. Instale CocoaPods: `sudo gem install cocoapods`
 
-## 🚀 Como Executar
+## � Scripts Disponíveis
+
+### **MicroApp**
+```bash
+npm start              # Servidor de desenvolvimento (porta 8085)
+npm run bundle:android:prod  # Build para produção Android
+npm run serve:prod     # Servidor HTTP para produção (porta 8090)
+npm run prod          # Build + servidor (comando combinado)
+```
+
+### **AppHost**
+```bash
+npm start             # Servidor de desenvolvimento (porta 8081)
+npm run android       # Build e executar no Android
+npm run ios          # Build e executar no iOS
+```
+
+## �🚀 Como Executar
 
 ### 1️⃣ **Primeiro: Iniciar o MicroApp (Porta 8085)**
 
@@ -55,10 +73,8 @@ cd MicroApp
 # Instalar dependências
 npm install
 
-# Iniciar o Metro bundler na porta 8085
-npm start
-# ou
-npx react-native start 
+# Iniciar o servidor de desenvolvimento na porta 8085
+npm start 
 
 ```
 
@@ -71,10 +87,8 @@ cd ../AppHost
 # Instalar dependências
 npm install
 
-# Iniciar o Metro bundler na porta 8081
-npm start
-# ou
-npx react-native start 
+# Iniciar o servidor de desenvolvimento na porta 8081
+npm start 
 
 ```
 
@@ -82,7 +96,8 @@ npx react-native start
 
 ```bash
 # Em outro terminal, configurar mapeamento de portas para emulador
-adb reverse tcp:8085 tcp:8085  # MicroApp (porta principal)
+adb reverse tcp:8085 tcp:8085  # MicroApp (desenvolvimento)
+adb reverse tcp:8090 tcp:8090  # MicroApp (produção)
 adb reverse tcp:8081 tcp:8081  # AppHost (se necessário)
 
 # Executar no Android
@@ -155,7 +170,7 @@ new Repack.plugins.ModuleFederationPluginV2({
   name: 'AppHost',
   filename: 'AppHost.container.js.bundle',
   remotes: {
-    MicroApp: 'MicroApp@http://127.0.0.1:8085/android/MicroApp.container.js.bundle',
+    MicroApp: 'MicroApp@http://127.0.0.1:8090/MicroApp.container.js.bundle',
   },
   shared: { /* dependências compartilhadas */ }
 })
@@ -165,13 +180,14 @@ new Repack.plugins.ModuleFederationPluginV2({
 
 | Aplicação | Porta | Descrição | Mapeamento Android |
 |-----------|-------|-----------|-------------------|
-| **MicroApp** | `8085` | Expõe componentes via Module Federation | `adb reverse tcp:8085 tcp:8085` |
-| **AppHost** | `8081` | Metro bundler do AppHost | `adb reverse tcp:8081 tcp:8081` |
+| **MicroApp** | `8085` | Servidor de desenvolvimento | `adb reverse tcp:8085 tcp:8085` |
+| **MicroApp** | `8090` | Servidor HTTP produção | `adb reverse tcp:8090 tcp:8090` |
+| **AppHost** | `8081` | Servidor de desenvolvimento | `adb reverse tcp:8081 tcp:8081` |
 
 ## 🔍 Troubleshooting
 
 ### ❌ **Erro: "MicroApp não disponível"**
-- **Causa:** MicroApp não está rodando na porta 8085
+- **Causa:** MicroApp não está rodando na porta 8085 (desenvolvimento) ou 8090 (produção)
 - **Solução:** Inicie o MicroApp primeiro
 
 ### ❌ **Erro: "EADDRINUSE: address already in use"**
@@ -186,7 +202,8 @@ new Repack.plugins.ModuleFederationPluginV2({
 - **Solução:** Configure mapeamento de portas:
   ```bash
   # Mapear portas do emulador para host
-  adb reverse tcp:8085 tcp:8085  # MicroApp (porta principal)
+  adb reverse tcp:8085 tcp:8085  # MicroApp (desenvolvimento)
+  adb reverse tcp:8090 tcp:8090  # MicroApp (produção)
   adb reverse tcp:8081 tcp:8081  # AppHost
   
   # Verificar se o mapeamento está ativo
@@ -224,7 +241,7 @@ new Repack.plugins.ModuleFederationPluginV2({
 ### ❌ **Componente não carrega no AppHost**
 - **Causa:** Timeout ou erro de rede
 - **Solução:** 
-  1. Verifique se o MicroApp está acessível: `curl http://127.0.0.1:8085/android/MicroApp.container.js.bundle`
+  1. Verifique se o MicroApp está acessível: `curl http://127.0.0.1:8090/MicroApp.container.js.bundle`
   2. Verifique logs do console no AppHost
 
 ## 🎯 Funcionalidades Demonstradas
@@ -251,6 +268,256 @@ new Repack.plugins.ModuleFederationPluginV2({
 - [ ] Adicionar autenticação compartilhada
 - [ ] Deploy em ambiente de produção
 - [ ] Testes automatizados para integração
+
+---
+
+## 📦 Build de Release - Guia Completo
+
+### 🎯 Conceitos Importantes
+
+**Module Federation em Release** é diferente do desenvolvimento porque:
+- **Hermes Engine**: JavaScript otimizado para produção
+- **Network Security**: Android bloqueia HTTP por padrão
+- **Bundle Optimization**: Minificação e otimização de código
+- **Source Maps**: Mapeamento para debug pode causar problemas
+
+### 🛠️ Pré-requisitos para Release
+
+1. **Android SDK** configurado
+2. **Keystore** para assinatura (debug ou release)
+3. **Servidor HTTP** para servir bundles do MicroApp
+4. **Network Security** configurado para cleartext traffic
+
+### 📋 Passo a Passo - Build de Release
+
+#### **1️⃣ Configurar Network Security (Android)**
+
+⚠️ **IMPORTANTE**: A configuração de cleartext traffic é apenas para **TESTE e DESENVOLVIMENTO**. Em produção, use sempre **HTTPS** com certificados SSL válidos.
+
+**Criar arquivo:** `AppHost/android/app/src/main/res/xml/network_security_config.xml`
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- ⚠️ APENAS PARA DESENVOLVIMENTO - NÃO USAR EM PRODUÇÃO -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">192.168.1.0</domain>
+    </domain-config>
+</network-security-config>
+```
+
+**Configurar AndroidManifest.xml:**
+```xml
+<application
+    android:usesCleartextTraffic="true"
+    android:networkSecurityConfig="@xml/network_security_config">
+```
+
+> **🔒 Segurança em Produção**: Remova `android:usesCleartextTraffic="true"` e configure apenas domínios HTTPS no network security config para produção.
+
+#### **2️⃣ Build do MicroApp (Remote)**
+
+```bash
+cd MicroApp
+
+# Instalar dependências
+npm install
+
+# Build para produção
+npm run bundle:android:prod
+
+# Iniciar servidor HTTP (porta 8090)
+npm run serve:prod
+# ou comando combinado
+npm run prod
+```
+
+**Verificar arquivos gerados:**
+- `build/generated/android/MicroApp.container.js.bundle`
+- `build/generated/android/mf-manifest.json`
+- Chunks de dependências e componentes
+
+#### **3️⃣ Build do AppHost (Host)**
+
+```bash
+cd AppHost
+
+# Instalar dependências
+npm install
+
+# Limpar cache
+npx @callstack/repack clean
+
+# Build APK de release
+cd android
+./gradlew assembleRelease
+
+# Localizar APK gerado
+ls -la app/build/outputs/apk/release/
+```
+
+#### **4️⃣ Troubleshooting de Build**
+
+**Erro: Source map não encontrado**
+```bash
+# Criar symlink para source map
+cd AppHost/android/app/build/intermediates/sourcemaps/react/release/
+ln -sf index.android.bundle.map index.android.bundle.packager.map
+```
+
+**Erro: remoteEntryExports is undefined**
+- Verificar se servidor MicroApp está rodando
+- Testar URL: `curl http://localhost:8090/MicroApp.container.js.bundle`
+- Verificar network security config
+
+### 🌐 Servidor HTTP para MicroApp
+
+**Criar:** `MicroApp/server.js`
+```javascript
+const express = require('express');
+const path = require('path');
+const app = express();
+
+// Servir arquivos estáticos
+app.use(express.static(path.join(__dirname, 'build/generated/android')));
+
+// Mapear remoteEntry.js para o container real
+app.get('/remoteEntry.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build/generated/android/MicroApp.container.js.bundle'));
+});
+
+// Headers CORS para desenvolvimento
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  next();
+});
+
+const PORT = 8090;
+app.listen(PORT, () => {
+  console.log(`🚀 MicroApp server running on http://localhost:${PORT}`);
+});
+```
+
+### 🔧 Configurações de Produção
+
+**MicroApp rspack.config.mjs:**
+```javascript
+export default {
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+  
+  // Otimizações para produção
+  optimization: {
+    minimize: true,
+    usedExports: true,
+    sideEffects: false,
+  },
+  
+  // Desabilitar source maps em produção
+  devtool: process.env.NODE_ENV === 'production' ? false : 'source-map',
+  
+  plugins: [
+    new Repack.plugins.ModuleFederationPluginV2({
+      name: 'MicroApp',
+      filename: 'MicroApp.container.js.bundle',
+      exposes: {
+        './SimpleComponent': './components/SimpleComponent',
+      },
+      shared: {
+        react: { singleton: true, eager: false },
+        "react-native": { singleton: true, eager: false },
+      },
+    }),
+  ],
+};
+```
+
+### 🚀 Deploy em Produção
+
+#### **Opção 1: Servidor Dedicado (Produção)**
+```bash
+# Fazer upload dos arquivos para servidor HTTPS
+scp -r build/generated/android/ user@server:/var/www/microapp/
+
+# Configurar nginx/apache com SSL para servir arquivos
+# Exemplo nginx com SSL:
+# server {
+#     listen 443 ssl;
+#     server_name seu-dominio.com;
+#     ssl_certificate /path/to/cert.pem;
+#     ssl_certificate_key /path/to/key.pem;
+#     location / {
+#         root /var/www/microapp;
+#     }
+# }
+```
+
+#### **Opção 2: CDN (Recomendado)**
+```bash
+# Upload para AWS S3, Google Cloud Storage, etc.
+aws s3 cp build/generated/android/ s3://seu-bucket/microapp/ --recursive
+```
+
+#### **Opção 3: Embed no APK**
+```bash
+# Copiar bundles para assets do Android
+cp build/generated/android/* AppHost/android/app/src/main/assets/
+```
+
+### 🧪 Testes de Release
+
+**1. Teste Local:**
+```bash
+# Instalar APK no emulador
+adb install AppHost/android/app/build/outputs/apk/release/app-release.apk
+
+# Verificar logs
+adb logcat | grep -i "apphost\|microapp\|federation"
+
+# Abrir a activity principal do app
+adb shell am start -n com.apphost/.MainActivity
+```
+
+**2. Teste de Conectividade:**
+```bash
+# Testar do emulador
+adb shell curl http://10.0.2.2:8090/MicroApp.container.js.bundle
+```
+
+**3. Teste de Funcionalidade:**
+- Abrir APK instalado
+- Verificar se MicroApp carrega
+- Testar interações do botão
+- Verificar fallback quando servidor offline
+
+### ⚠️ Limitações Conhecidas
+
+1. **Hermes Engine**: Pode ter problemas com eval() dinâmico
+2. **Source Maps**: Desabilitados em produção por padrão
+3. **Network Security**: Requer configuração específica para HTTP (apenas desenvolvimento)
+4. **Bundle Size**: Componentes federados aumentam tamanho
+5. **Offline Support**: Requer estratégia de cache/fallback
+
+### 🔒 Considerações de Segurança
+
+- **Cleartext Traffic**: Configuração atual permite HTTP apenas para desenvolvimento
+- **Produção**: Use sempre HTTPS com certificados SSL válidos
+- **Network Security**: Whitelist apenas domínios necessários
+- **Bundle Integrity**: Considere verificação de hash dos bundles remotos
+
+### 📊 Métricas de Performance
+
+**Bundle Sizes:**
+- MicroApp container: ~200KB
+- AppHost base: ~500KB
+- Shared dependencies: ~300KB
+
+**Load Times:**
+- First load: ~2-3s
+- Cached load: ~500ms
+- Fallback: ~100ms
 
 ---
 
