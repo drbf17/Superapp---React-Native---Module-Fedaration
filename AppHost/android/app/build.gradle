@@ -84,6 +84,11 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        
+        // Configurações para permitir cleartext traffic
+        manifestPlaceholders = [
+            usesCleartextTraffic: "true"
+        ]
     }
     signingConfigs {
         debug {
